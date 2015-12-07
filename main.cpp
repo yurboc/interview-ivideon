@@ -8,6 +8,8 @@
 
 #include "led.h"
 
+//#define DEBUG_MODE
+
 using namespace std;
 
 
@@ -56,8 +58,11 @@ int main()
       stringstream stream(line);
       string cmd, arg;
       stream >> cmd >> arg;
+      string commandState = performCommand(&led, cmd, arg).info();
+#ifdef DEBUG_MODE
       cout << "[CMD] \"" << cmd << "\": \"" << arg << "\"" << endl;
-      cout << performCommand(&led, cmd, arg).info() << endl;
+      cout << commandState << endl;
+#endif
     }
   }
 
