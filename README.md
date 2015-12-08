@@ -99,6 +99,4 @@ Goodbye!
 
 Limitations
 ----------
-- Multi-clients mode not implemented yet.
-- Ctrl-C not handled by server properly (leaved fifo files should be deleted by user).
-- Server stops when client closed.
+- Ctrl-C not handled by server properly (because 'open()' still blocked on exit(), need to reimplement this using non-blocking open() and select() with writing to stop_fd).
