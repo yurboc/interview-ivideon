@@ -4,6 +4,7 @@
 #include <fstream>
 #include <sstream>
 #include <stdexcept>
+#include <csignal>
 #include <sys/stat.h>
 
 #include "led.h"
@@ -15,6 +16,25 @@ using namespace std;
 
 const char *LedCommandPipeName = "/tmp/led_command";
 const char *LedStatePipeName = "/tmp/led_state";
+
+static bool s_interrupted = false;
+
+static void s_signal_handler(int signal_value)
+{
+    s_interrupted = true;
+    cout << "[SYS] STOP" << endl;
+    exit(0);
+}
+
+static void s_catch_signals(void)
+{
+    struct sigaction action;
+    action.sa_handler = s_signal_handler;
+    action.sa_flags = 0;
+    sigemptyset (&action.sa_mask);
+    sigaction (SIGINT, &action, NULL);
+    sigaction (SIGTERM, &action, NULL);
+}
 
 static bool create_fifo()
 {
@@ -49,6 +69,8 @@ int main()
   Led led;
 
   cout << "[SYS] Preparing server..." << endl;
+
+  s_catch_signals();
 
   if (!create_fifo()) {
     cerr << "[SYS] Can't create FIFO. Check if another example of server already running." << endl;
