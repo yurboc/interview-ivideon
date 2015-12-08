@@ -17,6 +17,9 @@ using namespace std;
 const char *LedCommandPipeName = "/tmp/led_command";
 const char *LedStatePipeName = "/tmp/led_state";
 
+ifstream ledCommandPipe;
+ofstream ledStatePipe;
+
 Led *led = NULL;
 
 static bool s_interrupted = false;
@@ -83,28 +86,41 @@ int main()
 
   led = new Led();
 
-  cout << "[SYS] Ready for commands." << endl;
-  ifstream ledCommandPipe(LedCommandPipeName);
-  ofstream ledStatePipe(LedStatePipeName);
-  string line;
   while (true)
   {
-    getline(ledCommandPipe, line);
-    if (ledCommandPipe.eof()) {
-      cout << "[SYS] FIFO closed. Stop." << endl;
+    if (s_interrupted)
       break;
+
+    cout << "[SYS] Ready for commands." << endl;
+
+    ledCommandPipe.open(LedCommandPipeName);
+    ledStatePipe.open(LedStatePipeName);
+
+    string line;
+
+    while (true)
+    {
+      getline(ledCommandPipe, line);
+
+      if (ledCommandPipe.eof()) {
+        cout << "[SYS] FIFO closed. Restart." << endl;
+        break;
+      }
+      else {
+        stringstream stream(line);
+        string cmd, arg;
+        stream >> cmd >> arg;
+        string commandState = performCommand(led, cmd, arg).info();
+  #ifdef DEBUG_MODE
+        cout << "[CMD] \"" << cmd << "\": \"" << arg << "\"" << endl;
+        cout << commandState << endl;
+  #endif
+        ledStatePipe << commandState << endl;
+      }
     }
-    else {
-      stringstream stream(line);
-      string cmd, arg;
-      stream >> cmd >> arg;
-      string commandState = performCommand(led, cmd, arg).info();
-#ifdef DEBUG_MODE
-      cout << "[CMD] \"" << cmd << "\": \"" << arg << "\"" << endl;
-      cout << commandState << endl;
-#endif
-      ledStatePipe << commandState << endl;
-    }
+
+    ledCommandPipe.close();
+    ledStatePipe.close();
   }
 
   cout << "[SYS] Server shutdown." << endl;
