@@ -17,12 +17,18 @@ using namespace std;
 const char *LedCommandPipeName = "/tmp/led_command";
 const char *LedStatePipeName = "/tmp/led_state";
 
+Led *led = NULL;
+
 static bool s_interrupted = false;
 
 static void s_signal_handler(int signal_value)
 {
     s_interrupted = true;
     cout << "[SYS] STOP" << endl;
+
+    if (led != NULL)
+      delete led;
+
     exit(0);
 }
 
@@ -66,8 +72,6 @@ CmdResult performCommand(Led *led, const string& cmd, const string& arg)
 
 int main()
 {
-  Led led;
-
   cout << "[SYS] Preparing server..." << endl;
 
   s_catch_signals();
@@ -76,6 +80,8 @@ int main()
     cerr << "[SYS] Can't create FIFO. Check if another example of server already running." << endl;
     return 1;
   }
+
+  led = new Led();
 
   cout << "[SYS] Ready for commands." << endl;
   ifstream ledCommandPipe(LedCommandPipeName);
@@ -92,7 +98,7 @@ int main()
       stringstream stream(line);
       string cmd, arg;
       stream >> cmd >> arg;
-      string commandState = performCommand(&led, cmd, arg).info();
+      string commandState = performCommand(led, cmd, arg).info();
 #ifdef DEBUG_MODE
       cout << "[CMD] \"" << cmd << "\": \"" << arg << "\"" << endl;
       cout << commandState << endl;
@@ -106,5 +112,9 @@ int main()
   ledStatePipe.close();
   unlink(LedCommandPipeName);
   unlink(LedStatePipeName);
+
+  if (led != NULL)
+    delete led;
+
   return 0;
 }
