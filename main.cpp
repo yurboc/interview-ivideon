@@ -13,8 +13,19 @@
 using namespace std;
 
 
-const char *fifoFileName = "/tmp/led_fifo";
-const char *fifoStateFileName = "/tmp/state_fifo";
+const char *LedCommandPipeName = "/tmp/led_command";
+const char *LedStatePipeName = "/tmp/led_state";
+
+static bool create_fifo()
+{
+  if (mkfifo(LedCommandPipeName, S_IWUSR | S_IRUSR | S_IRGRP | S_IROTH) != 0)
+    return false;
+
+  if (mkfifo(LedStatePipeName, S_IWUSR | S_IRUSR | S_IRGRP | S_IROTH) != 0)
+    return false;
+
+  return true;
+}
 
 CmdResult performCommand(Led *led, const string& cmd, const string& arg)
 {
@@ -38,27 +49,20 @@ int main()
   Led led;
 
   cout << "[SYS] Preparing server..." << endl;
-  int ledFifo = mkfifo(fifoFileName, S_IWUSR | S_IRUSR | S_IRGRP | S_IROTH);
-  int stateFifo = mkfifo(fifoStateFileName, S_IWUSR | S_IRUSR | S_IRGRP | S_IROTH);
-  if (ledFifo != 0) {
+
+  if (!create_fifo()) {
     cerr << "[SYS] Can't create FIFO. Check if another example of server already running." << endl;
-    cerr << "[SYS] If another server is not running perform 'rm " << fifoFileName << "' from console." << endl;
-    return 1;
-  }
-  if (stateFifo != 0) {
-    cerr << "[SYS] Can't create state FIFO. Check if another example of server already running." << endl;
-    cerr << "[SYS] If another server is not running perform 'rm " << fifoStateFileName << "' from console." << endl;
     return 1;
   }
 
   cout << "[SYS] Ready for commands." << endl;
-  ifstream fifo(fifoFileName);
-  ofstream ledState(fifoStateFileName);
+  ifstream ledCommandPipe(LedCommandPipeName);
+  ofstream ledStatePipe(LedStatePipeName);
   string line;
   while (true)
   {
-    getline(fifo, line);
-    if (fifo.eof()) {
+    getline(ledCommandPipe, line);
+    if (ledCommandPipe.eof()) {
       cout << "[SYS] FIFO closed. Stop." << endl;
       break;
     }
@@ -71,13 +75,14 @@ int main()
       cout << "[CMD] \"" << cmd << "\": \"" << arg << "\"" << endl;
       cout << commandState << endl;
 #endif
-      ledState << commandState << endl;
+      ledStatePipe << commandState << endl;
     }
   }
 
   cout << "[SYS] Server shutdown." << endl;
-  fifo.close();
-  unlink(fifoFileName);
-  unlink(fifoStateFileName);
+  ledCommandPipe.close();
+  ledStatePipe.close();
+  unlink(LedCommandPipeName);
+  unlink(LedStatePipeName);
   return 0;
 }

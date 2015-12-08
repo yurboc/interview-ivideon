@@ -1,8 +1,8 @@
 #!/bin/bash
 
 SERVER_FILE="led_server"
-FIFO_FILE="/tmp/led_fifo"
-STATE_FILE="/tmp/state_fifo"
+FIFO_FILE="/tmp/led_command"
+STATE_FILE="/tmp/led_state"
 
 echo "+=========================+"
 echo "|   LED controller v1.0   |"
